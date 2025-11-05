@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Birthday Surprise for Mom</title>
+  <style>
+    :root{--bg1:#fff4f6;--bg2:#fff2ea;--pink:#f7c6d6;--rose:#d87aa3;--muted:#6b5360}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(135deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;color:#46323d}
+    .card{width:100%;max-width:820px;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.98));border-radius:20px;padding:26px;box-shadow:0 16px 50px rgba(15,10,15,0.08);position:relative;overflow:hidden;text-align:left}
+    h1{color:#6b2f4a;margin:0 0 8px;font-size:28px;text-align:center}
+    .subtitle{color:var(--muted);text-align:center;margin-bottom:18px}
+    .message{background:linear-gradient(180deg,#fff,#fff7fb);padding:18px;border-radius:12px;border:1px solid rgba(216,122,151,0.06);box-shadow:0 6px 20px rgba(216,122,151,0.04);margin-bottom:12px}
+    .lang-title{font-weight:800;color:#7a3d59;margin-bottom:6px}
+    .text{color:#4a303f;line-height:1.6;font-size:16px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+    .btn{padding:10px 14px;border-radius:12px;border:0;cursor:pointer;font-weight:700;background:linear-gradient(90deg,var(--pink),var(--rose));color:white}
+    .btn-ghost{background:transparent;border:2px solid rgba(107,75,95,0.06);color:var(--muted);padding:10px 12px;border-radius:12px}
+    footer{margin-top:18px;text-align:center;color:#8b6f7f;font-size:13px}
+    .music-note{font-size:12px;color:#b65b86;margin-left:8px}
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <h1>Happy Birthday — For Mom / Pour Maman 💖</h1>
+    <div class="subtitle">A small secret — press Play Voice and enjoy.</div>
+
+    <div class="message" id="english">
+      <div class="lang-title">English</div>
+      <div class="text" id="enText">To my Mom, you are my heart, my home, and my guiding light. Thank you for every sacrifice, every hug, and every lesson. I love you more than words can say.</div>
+    </div>
+
+    <div class="message" id="french">
+      <div class="lang-title">Français</div>
+      <div class="text" id="frText">À ma Maman, tu es mon cœur, ma maison et ma lumière. Merci pour tous tes sacrifices et ton amour sans condition. Je t'aime de tout mon cœur.</div>
+    </div>
+
+    <div class="controls" role="group" aria-label="voice controls">
+      <button class="btn" id="playBoth">Play Voice (English → Français)</button>
+      <button class="btn-ghost" id="playEn">Play English</button>
+      <button class="btn-ghost" id="playFr">Play Français</button>
+    </div>
+
+    <footer>Made with love — scan the QR to open this page. 🎁</footer>
+  </div>
+
+  <script>
+    // Use SpeechSynthesis to read the user's exact paragraphs. Prefer a calm female voice.
+    async function getVoices() {
+      return new Promise(resolve => {
+        let v = speechSynthesis.getVoices();
+        if (v.length) return resolve(v);
+        speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices());
+      });
+    }
+
+    function chooseVoice(voices, langPrefix) {
+      const femaleKeywords = ['female','samantha','amy','emma','joanna','karen','alloy','google','sara','olivia','victoria','isla'];
+      // prefer voice matching language and female-like name
+      for (const voice of voices) {
+        const name = (voice.name || '').toLowerCase();
+        const lang = (voice.lang || '').toLowerCase();
+        if (lang.startsWith(langPrefix) && femaleKeywords.some(k => name.includes(k))) return voice;
+      }
+      // fallback: any voice with language match
+      for (const voice of voices) {
+        const lang = (voice.lang || '').toLowerCase();
+        if (lang.startsWith(langPrefix)) return voice;
+      }
+      // fallback to first voice
+      return voices[0] || null;
+    }
+
+    async function speak(text, langPrefix) {
+      const voices = await getVoices();
+      const voice = chooseVoice(voices, langPrefix);
+      return new Promise(resolve => {
+        const u = new SpeechSynthesisUtterance(text);
+        if (voice) u.voice = voice;
+        try { u.lang = (langPrefix === 'fr' ? 'fr-FR' : 'en-US'); } catch(e) {}
+        u.rate = 0.95; u.pitch = 1.02; u.volume = 1.0;
+        u.onend = resolve;
+        speechSynthesis.speak(u);
+      });
+    }
+
+    document.getElementById('playEn').addEventListener('click', ()=> {
+      const t = document.getElementById('enText').innerText.trim();
+      speak(t, 'en');
+    });
+    document.getElementById('playFr').addEventListener('click', ()=> {
+      const t = document.getElementById('frText').innerText.trim();
+      speak(t, 'fr');
+    });
+    document.getElementById('playBoth').addEventListener('click', async ()=> {
+      const en = document.getElementById('enText').innerText.trim();
+      const fr = document.getElementById('frText').innerText.trim();
+      await speak(en, 'en');
+      await speak(fr, 'fr');
+    });
+
+    // Try to auto-play voice once politely (many browsers block autoplay)
+    window.addEventListener('load', async () => {
+      // attempt but don't force; show controls if blocked
+      try {
+        // small delay so page visuals load
+        await new Promise(r => setTimeout(r, 700));
+        // Attempt to play english then french; if blocked, user can press Play
+        await speak(document.getElementById('enText').innerText.trim(), 'en');
+        await speak(document.getElementById('frText').innerText.trim(), 'fr');
+      } catch(e) {
+        // ignore autoplay errors; user can press buttons
+        console.log('Autoplay blocked or failed — use buttons.');
+      }
+    });
+  </script>
+</body>
+</html>
